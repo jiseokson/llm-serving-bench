@@ -80,8 +80,8 @@
 | 지표 | Sync 방식 | Streaming 방식 | 비고 / 측정 방법 요약 |
 | --- | --- | --- | --- |
 | **Total Latency** | ✅ 전체 응답 도착까지 시간 측정 | ✅ 마지막 토큰 수신까지 시간 측정 | start_time ~ end_time 측정 |
-| **Prompt-to-First-Token (P2FT)** | ❌ 측정 어려움(토큰 단위 응답이 아님) | ✅ 첫 토큰 도착 시간 측정 | start_time ~ 첫 SSE line 수신 시점 |
-| **Token Generation Speed** (tok/s) | ❌ 부정확, 토큰 단위 수신이 아님 | ✅ 토큰 수 / 응답 시간 | 토큰 수 카운팅 & 타이밍 필요 |
+| **Prompt-to-First-Token (P2FT)** | ❌ 측정 어려움, 토큰 단위 수신이 아님 | ✅ 첫 토큰 도착 시간 측정 | start_time ~ 첫 SSE line 수신 시점 |
+| **Token Generation Speed** (tok/s) | ❌ 측정 어려움, 토큰 단위 수신이 아님 | ✅ 토큰 수 / 응답 시간 | 토큰 수 카운팅 & 타이밍 필요 |
 | **Throughput** (req/s) | ✅ 멀티 요청 실행 시간 측정 | ✅ 멀티 요청 실행 시간 측정 | 병렬 처리: asyncio.gather or threading |
 | **GPU Memory Usage** | ✅ 동일 | ✅ 동일 | pynvml or nvidia-smi |
 | **Host Memory Usage** | ✅ 동일 | ✅ 동일 | psutil |

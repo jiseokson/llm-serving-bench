@@ -1,10 +1,12 @@
 import os
 import sys
 import json
+import time
 import asyncio
 import argparse
 
 import httpx
+import pandas as pd
 
 task2dataset = {
     "chat": "oasst1",
@@ -120,6 +122,23 @@ class CompletionRequest:
                 **prompt,
                 **self.generation_args}
             
+class Logger:
+    def __init__(self, output_path):
+        self.output_path = output_path
+
+        self.data = {}
+        self.column_counter = {}
+
+    def add_column(self, column, data):
+        column_count = self.column_counter.get(column, 0) + 1
+        self.column_counter[column] = column_count
+
+        self.data[f"{column}#{column_count}"] = data
+
+    def checkout(self):
+        df = pd.DataFrame(self.data)
+        df.to_csv(self.output_path, index=False)
+
 async def send_request(request):
     headers = {
         "Accept": "application/json" if request.mode == "sync" else "text/event-stream"}
@@ -127,49 +146,78 @@ async def send_request(request):
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             if request.mode == "sync":
+                start = time.perf_counter()
                 response = await client.post(request.endpoint, json=request.payload, headers=headers)
+                end = time.perf_counter()
+
                 response.raise_for_status()
-                yield response.json()
+
+                yield response.json(), end - start
 
             elif request.mode == "stream":
+                start = time.perf_counter()
+
                 async with client.stream("POST", request.endpoint, json=request.payload, headers=headers) as response:
                     response.raise_for_status()
+
                     async for line in response.aiter_lines():
                         try:
-                            yield json.loads(line[6:] if line.startswith("data") else line)
+                            yield json.loads(line[6:] if line.startswith("data") else line), True
                         except:
                             continue
 
         except httpx.HTTPStatusError as e:
-            yield {"error": f"HTTP error {e.response.status_code}", "detail": str(e)}
+            yield {"error": f"HTTP error {e.response.status_code}", "detail": str(e)}, None
 
         except httpx.RequestError as e:
-            yield {"error": "Request failed", "detail": str(e)}
+            yield {"error": "Request failed", "detail": str(e)}, None
 
         except Exception as e:
-            yield {"error": "Unhandled exception", "detail": str(e)}
+            yield {"error": "Unhandled exception", "detail": str(e)}, None
 
-async def sync_(request):
-    async for response in send_request(request):
-        print(response)
-        print()
+async def evaluate_sync_latency(model, task, mode, logger):
+    prompt_tokens = []
+    completion_tokens = []
+    latencies = []
 
-async def stream(request):
+    for i, prompt in enumerate(prompts(model, task)):
+        request = CompletionRequest(model, task, prompt, mode)
+
+        async for response, latency in send_request(request):
+            prompt_tokens.append(response["usage"]["prompt_tokens"] if latency else None)
+            completion_tokens.append(response["usage"]["completion_tokens"] if latency else None)
+            latencies.append(latency if latency else None)
+
+            if latency:
+                print(
+                    f"[Complete {i+1:3d}] {model2id[model]} {task} | "
+                    f"Prompt tokens: {prompt_tokens[-1]} | "
+                    f"Completion tokens: {completion_tokens[-1]} | "
+                    f"Latency: {latencies[-1]:.3f} sec")
+            else:
+                print(f"[Error] {response}")
+
+    logger.add_column("prompt_tokens", prompt_tokens)
+    logger.add_column("completion_tokens", completion_tokens)
+    logger.add_column("total_latency", latencies)
+
+async def evaluate_stream_latency(request, logger):
     async for data in send_request(request):
-        print(data)
-        print()
+        pass
+
+def run_latency_benchmark(model, task, mode, repeat, output_path):
+    logger = Logger(output_path)
+
+    for i in range(repeat):
+        if mode == "sync":
+            asyncio.run(evaluate_sync_latency(model, task, mode, logger))
+        elif mode == "stream":
+            asyncio.run(evaluate_stream_latency(model, task, mode, logger))
+
+    logger.checkout()
 
 def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
     pass
-
-def run_latency_benchmark(model, task, mode, repeat, output_path):
-    for prompt in prompts(model, task):
-        request = CompletionRequest(model, task, prompt, mode)
-
-        if mode == "sync":
-            asyncio.run(sync_(request))
-        elif mode == "stream":
-            asyncio.run(stream(request))
 
 def main():
     args = parse_args()

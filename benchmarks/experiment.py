@@ -135,8 +135,10 @@ async def send_request(request):
                 async with client.stream("POST", request.endpoint, json=request.payload, headers=headers) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():
-                        if line.startswith("data"):
-                            yield line[6:]
+                        try:
+                            yield json.loads(line[6:] if line.startswith("data") else line)
+                        except:
+                            continue
 
         except httpx.HTTPStatusError as e:
             yield {"error": f"HTTP error {e.response.status_code}", "detail": str(e)}

@@ -1,6 +1,10 @@
-import os, sys
+import os
+import sys
 import json
+import asyncio
 import argparse
+
+import httpx
 
 task2dataset = {
     "chat": "oasst1",
@@ -14,6 +18,11 @@ model2apiver = {
     "phi2": "completion",
     "llama2": "chat",
     "mistral": "chat",
+}
+
+apiver2endpoint = {
+    "completion": "/v1/completions",
+    "chat": "/v1/chat/completions",
 }
 
 model2id = {
@@ -94,6 +103,8 @@ class CompletionRequest:
         self.model_id = model2id[model]
         self.apiver = model2apiver[model]
 
+        self.endpoint = host + apiver2endpoint[self.apiver]
+
         self.generation_args = generation_config[(model, task)]
 
         if self.apiver == "completion":
@@ -108,16 +119,44 @@ class CompletionRequest:
                 "model": self.model_id,
                 **prompt,
                 **self.generation_args}
+            
+async def send_request(request):
+    headers = {
+        "Accept": "application/json" if request.mode == "sync" else "text/event-stream"}
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        if request.mode == "sync":
+            response = await client.post(request.endpoint, json=request.payload, headers=headers)
+            response.raise_for_status()
+            yield response.json()
+
+        elif request.mode == "stream":
+            async with client.stream("POST", request.endpoint, json=request.payload, headers=headers) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data"):
+                        yield line[6:]
+
+async def sync_(request):
+    async for response in send_request(request):
+        print(response)
+
+async def stream(request):
+    async for data in send_request(request):
+        print(data)
 
 def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
     pass
 
 def run_latency_benchmark(model, task, mode, repeat, output_path):
     for prompt in prompts(model, task):
-        print(json.dumps(CompletionRequest(model, task, prompt, mode).payload, indent=True))
-        print()
-        print("=============================")
-        print()
+        request = CompletionRequest(model, task, prompt, mode)
+
+        if mode == "sync":
+            asyncio.run(sync_(request))
+        elif mode == "stream":
+            asyncio.run(stream(request))
+
 
 def main():
     args = parse_args()

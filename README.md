@@ -30,7 +30,9 @@
 ## 실험 환경
 
 - RunPod A100 (40GB)
-- Python 3.X, CUDA X.X, PyTorch 2.X, …
+- CUDA 11.8.0
+- Python 3.10
+- PyTorch 2.1.0
 
 ## 실험 대상 태스크
 

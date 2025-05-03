@@ -125,25 +125,37 @@ async def send_request(request):
         "Accept": "application/json" if request.mode == "sync" else "text/event-stream"}
 
     async with httpx.AsyncClient(timeout=10) as client:
-        if request.mode == "sync":
-            response = await client.post(request.endpoint, json=request.payload, headers=headers)
-            response.raise_for_status()
-            yield response.json()
-
-        elif request.mode == "stream":
-            async with client.stream("POST", request.endpoint, json=request.payload, headers=headers) as response:
+        try:
+            if request.mode == "sync":
+                response = await client.post(request.endpoint, json=request.payload, headers=headers)
                 response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if line.startswith("data"):
-                        yield line[6:]
+                yield response.json()
+
+            elif request.mode == "stream":
+                async with client.stream("POST", request.endpoint, json=request.payload, headers=headers) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if line.startswith("data"):
+                            yield line[6:]
+
+        except httpx.HTTPStatusError as e:
+            yield {"error": f"HTTP error {e.response.status_code}", "detail": str(e)}
+
+        except httpx.RequestError as e:
+            yield {"error": "Request failed", "detail": str(e)}
+
+        except Exception as e:
+            yield {"error": "Unhandled exception", "detail": str(e)}
 
 async def sync_(request):
     async for response in send_request(request):
         print(response)
+        print()
 
 async def stream(request):
     async for data in send_request(request):
         print(data)
+        print()
 
 def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
     pass
@@ -156,7 +168,6 @@ def run_latency_benchmark(model, task, mode, repeat, output_path):
             asyncio.run(sync_(request))
         elif mode == "stream":
             asyncio.run(stream(request))
-
 
 def main():
     args = parse_args()

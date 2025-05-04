@@ -129,11 +129,14 @@ class Logger:
         self.data = {}
         self.column_counter = {}
 
-    def add_column(self, column, data):
+    def add_column(self, column, data, exist_ok=False):
+        if exist_ok and self.column_counter.get(column, 0) > 0:
+            return
+
         column_count = self.column_counter.get(column, 0) + 1
         self.column_counter[column] = column_count
 
-        self.data[f"{column}#{column_count}"] = data
+        self.data[column if exist_ok else f"{column}#{column_count}"] = data        
 
     def checkout(self):
         df = pd.DataFrame(self.data)
@@ -162,7 +165,7 @@ async def send_request(request):
 
                     async for line in response.aiter_lines():
                         try:
-                            yield json.loads(line[6:] if line.startswith("data") else line), True
+                            yield json.loads(line[6:] if line.startswith("data") else line), time.perf_counter() - start
                         except:
                             continue
 
@@ -178,32 +181,74 @@ async def send_request(request):
 async def evaluate_sync_latency(model, task, mode, logger):
     prompt_tokens = []
     completion_tokens = []
-    latencies = []
+    total_latencies = []
+    token_generation_speeds = []
 
     for i, prompt in enumerate(prompts(model, task)):
         request = CompletionRequest(model, task, prompt, mode)
 
         async for response, latency in send_request(request):
-            prompt_tokens.append(response["usage"]["prompt_tokens"] if latency else None)
-            completion_tokens.append(response["usage"]["completion_tokens"] if latency else None)
-            latencies.append(latency if latency else None)
+            prompt_tokens.append(response["usage"]["prompt_tokens"] if latency is not None else None)
+            completion_tokens.append(response["usage"]["completion_tokens"] if latency is not None else None)
+            total_latencies.append(latency)
+            token_generation_speeds.append(completion_tokens[-1] / total_latencies[-1] if latency is not None else None)
 
-            if latency:
+            if latency is not None:
                 print(
                     f"[Complete {i+1:3d}] {model2id[model]} {task} | "
                     f"Prompt tokens: {prompt_tokens[-1]} | "
                     f"Completion tokens: {completion_tokens[-1]} | "
-                    f"Latency: {latencies[-1]:.3f} sec")
+                    f"Total Latency: {total_latencies[-1]:.3f} sec | "
+                    f"Token Gen Speed: {token_generation_speeds[-1]:.3f} tok/s")
             else:
                 print(f"[Error] {response}")
 
-    logger.add_column("prompt_tokens", prompt_tokens)
+    logger.add_column("prompt_tokens", prompt_tokens, exist_ok=True)
     logger.add_column("completion_tokens", completion_tokens)
-    logger.add_column("total_latency", latencies)
+    logger.add_column("total_latency", total_latencies)
+    logger.add_column("token_generation_speed", token_generation_speeds)
 
-async def evaluate_stream_latency(request, logger):
-    async for data in send_request(request):
-        pass
+async def evaluate_stream_latency(model, task, mode, logger):
+    completion_tokens = []
+    p2fts = []
+    total_latencies = []
+    token_generation_speeds = []
+
+    for i, prompt in enumerate(prompts(model, task)):
+        token_latencies = []
+
+        request, error = CompletionRequest(model, task, prompt, mode), None
+
+        async for data, latency in send_request(request):
+            token_latencies.append(latency)
+
+            if latency is None:
+                error = data
+
+        if not error:
+            completion_token = len(token_latencies)
+            p2ft = token_latencies[0]
+            total_latency = token_latencies[-1]
+            token_generation_speed = len(token_latencies)/token_latencies[-1]
+
+            print(
+                f"[Complete {i+1:3d}] {model2id[model]} {task} | "
+                f"Completion tokens: {completion_token} | "
+                f"P2FT: {p2ft:.3f} sec | "
+                f"Total Latency: {total_latency:.3f} sec | "
+                f"Token Gen Speed: {token_generation_speed:.3f} tok/s")
+        else:
+            print(f"[Error] {error}")
+
+        completion_tokens.append(completion_token if not error else None)
+        p2fts.append(p2ft if not error else None)
+        total_latencies.append(total_latency if not error else None)
+        token_generation_speeds.append(token_generation_speed if not error else None)
+
+    logger.add_column("completion_tokens", completion_tokens)
+    logger.add_column("p2ft", p2fts)
+    logger.add_column("total_latency", total_latencies)
+    logger.add_column("token_generation_speed", token_generation_speeds)
 
 def run_latency_benchmark(model, task, mode, repeat, output_path):
     logger = Logger(output_path)

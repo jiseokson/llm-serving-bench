@@ -255,36 +255,71 @@ async def evaluate_stream_latency(model, task, mode, logger):
     logger.add_column("total_latency", total_latencies)
     logger.add_column("token_generation_speed", token_generation_speeds)
 
-async def evaluate_sync_throughput(model, task, mode, parallel, logger):
-    async def worker(n):
-        elapsed = 0
-        requests = 0
-        success_requests = 0
-        completion_tokens = 0
+async def sync_worker(n, model, task, mode):
+    elapsed = 0
+    requests = 0
+    success_requests = 0
+    completion_tokens = 0
 
-        for i, prompt in enumerate(prompts(model, task)):
-            request = CompletionRequest(model, task, prompt, mode)
+    for i, prompt in enumerate(prompts(model, task)):
+        request = CompletionRequest(model, task, prompt, mode)
 
-            async for response, latency in send_request(request):
-                elapsed += latency if latency is not None else 0
-                completion_tokens += response["usage"]["completion_tokens"] if latency is not None else 0
+        async for response, latency in send_request(request):
+            elapsed += latency if latency is not None else 0
+            completion_tokens += response["usage"]["completion_tokens"] if latency is not None else 0
 
-                requests += 1
+            requests += 1
 
-                if latency is not None:
-                    print(
-                        f"[Worker {n:2d} - Complete {i+1:3d}] {model2id[model]} {task} | "
-                        f"Elapsed: {latency:.3f} sec | "
-                        f"Completion tokens: {response["usage"]["completion_tokens"]}")
+            if latency is not None:
+                success_requests += 1
 
-                    success_requests += 1
+                print(
+                    f"[Worker {n:2d} - Complete {i+1:3d}] {model2id[model]} {task} | "
+                    f"Elapsed: {latency:.3f} sec | "
+                    f"Completion tokens: {response["usage"]["completion_tokens"]}")
 
-                else:
-                    print(f"[Worker {n:2d} - Error] {response}")
+            else:
+                print(f"[Worker {n:2d} - Error] {response}")
 
-        return [elapsed, requests, success_requests, completion_tokens]
+    return [elapsed, requests, success_requests, completion_tokens]
 
-    results = await asyncio.gather(*[worker(i + 1) for i in range(parallel)])
+async def stream_worker(n, model, task, mode):
+    elapsed = 0
+    requests = 0
+    success_requests = 0
+    completion_tokens = 0
+
+    for i, prompt in enumerate(prompts(model, task)):
+        token_latencies = []
+
+        request, error = CompletionRequest(model, task, prompt, mode), None
+
+        async for data, latency in send_request(request):
+            token_latencies.append(latency if latency is not None else 0)
+
+            if latency is None:
+                error = data
+
+        requests += 1
+
+        if error is None:
+            elapsed += token_latencies[-1]
+            completion_tokens += len(token_latencies)
+
+            success_requests += 1
+
+            print(
+                f"[Worker {n:2d} - Complete {i+1:3d}] {model2id[model]} {task} | "
+                f"Elapsed: {token_latencies[-1]:.3f} sec | "
+                f"Completion tokens: {len(token_latencies)}")
+
+        else:
+            print(f"[Worker {n:2d} - Error] {error}")
+
+    return [elapsed, requests, success_requests, completion_tokens]
+
+async def evaluate_throughput(model, task, mode, worker, parallel, logger):
+    results = await asyncio.gather(*[worker(i + 1, model, task, mode) for i in range(parallel)])
 
     all_elapses, all_requests, all_success_requests, all_completion_tokens = zip(*results)
 
@@ -307,9 +342,6 @@ async def evaluate_sync_throughput(model, task, mode, parallel, logger):
 
     logger.checkout()
 
-async def evaluate_stream_throughput(model, task, mode, parallel, logger):
-    pass
-
 def run_latency_benchmark(model, task, mode, repeat, output_path):
     logger = Logger(output_path)
 
@@ -326,9 +358,9 @@ def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
 
     for i in range(repeat):
         if mode == "sync":
-            asyncio.run(evaluate_sync_throughput(model, task, mode, parallel, logger))
+            asyncio.run(evaluate_throughput(model, task, mode, sync_worker, parallel, logger))
         elif mode == "stream":
-            asyncio.run(evaluate_stream_throughput(model, task, mode, parallel, logger))
+            asyncio.run(evaluate_throughput(model, task, mode, stream_worker, parallel, logger))
 
 def main():
     args = parse_args()

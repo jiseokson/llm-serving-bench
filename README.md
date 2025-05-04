@@ -81,10 +81,11 @@
 
 | 지표 | Sync 방식 | Streaming 방식 | 비고 / 측정 방법 요약 |
 | --- | --- | --- | --- |
-| **Total Latency** | ✅ 전체 응답 도착까지 시간 측정 | ✅ 마지막 토큰 수신까지 시간 측정 | start_time ~ end_time 측정 |
+| **Total Latency** | ✅ 전체 응답 도착까지 시간 측정 | ✅ 마지막 토큰 수신까지 시간 측정 | start_time ~ end_time |
 | **Prompt-to-First-Token (P2FT)** | ❌ 측정 어려움, 토큰 단위 수신이 아님 | ✅ 첫 토큰 도착 시간 측정 | start_time ~ 첫 SSE line 수신 시점 |
-| **Token Generation Speed** (tok/s) | ❌ 측정 어려움, 토큰 단위 수신이 아님 | ✅ 토큰 수 / 응답 시간 | 토큰 수 카운팅 & 타이밍 필요 |
-| **Throughput** (req/s) | ✅ 멀티 요청 실행 시간 측정 | ✅ 멀티 요청 실행 시간 측정 | 병렬 처리: asyncio.gather or threading |
-| **GPU Memory Usage** | ✅ 동일 | ✅ 동일 | pynvml or nvidia-smi |
+| **Token Generation Speed** (tok/s) | ✅ 토큰 수 / 응답 시간 | ✅ 토큰 수 / 마지막 토큰 응답 시간 | 토큰 수 카운팅 & 타이밍 필요 |
+| **Request Throughput** (req/s) | ✅ 요청 수 / 전체 응답 시간 | ✅ 요청 수 / 마지막 토큰 응답 시간 | asyncio & httpx |
+| **Token Throughput** (tok/s) | ✅ 토큰 수 / 전체 응답 시간 | ✅ 토큰 수 / 마지막 토큰 응답 시간 | asyncio & httpx |
+| **GPU Memory Usage** | ✅ 동일 | ✅ 동일 | pynvml |
 | **Host Memory Usage** | ✅ 동일 | ✅ 동일 | psutil |
-| **Context Length Scaling** | ✅ 가능 | ✅ 가능 | 프롬프트 길이별 latency 비교 |
+| **Context Length Scaling** | ✅ 동일 | ✅ 동일 | 프롬프트 길이별 latency 비교 |

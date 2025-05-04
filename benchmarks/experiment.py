@@ -6,6 +6,8 @@ import asyncio
 import argparse
 
 import httpx
+import psutil
+import pynvml
 import pandas as pd
 
 host = "http://localhost:8000"
@@ -89,6 +91,17 @@ def parse_args():
         sys.exit(1)
 
     return args
+
+def get_system_used_ram_mb():
+    mem = psutil.virtual_memory()
+    return round((mem.total - mem.available) / 1024 / 1024, 2)
+
+def get_system_used_gpu_vram_mb(gpu_index=0):
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_index)
+    meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    pynvml.nvmlShutdown()
+    return round(meminfo.used / 1024 / 1024, 2)
 
 def prompts(model, task):
     prompt_path = os.path.join("prompts", f"{task}_{task2dataset[task]}_{model2apiver[model]}.jsonl")
@@ -278,7 +291,7 @@ async def sync_worker(n, model, task, mode):
                 print(
                     f"[Worker {n:2d} - Complete {i+1:3d}] {model2id[model]} {task} | "
                     f"Elapsed: {latency:.3f} sec | "
-                    f"Completion tokens: {response["usage"]["completion_tokens"]}")
+                    f"Completion tokens: {response['usage']['completion_tokens']}")
 
             else:
                 print(f"[Worker {n:2d} - Error] {response}")

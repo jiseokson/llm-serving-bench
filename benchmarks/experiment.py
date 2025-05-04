@@ -8,11 +8,6 @@ import argparse
 import httpx
 import pandas as pd
 
-POD_ID = "iwly9imrnm55v0" # RTX2000 (gpt2)
-# POD_ID = "td4ionq4woxc7s" # A100 (llama2, mistral)
-PORT = 8000
-host = f"https://{POD_ID}-{PORT}.proxy.runpod.net"
-
 task2dataset = {
     "chat": "oasst1",
     "code": "humaneval",
@@ -141,7 +136,12 @@ class Logger:
         column_count = self.column_counter.get(column, 0) + 1
         self.column_counter[column] = column_count
 
-        self.data[column if exist_ok else f"{column}#{column_count}"] = data        
+        self.data[column if exist_ok else f"{column}#{column_count}"] = data
+
+    def add_row(self, column, data):
+        datas = self.data.get(column, [])
+        datas.append(data)
+        self.data[column] = datas
 
     def checkout(self):
         df = pd.DataFrame(self.data)
@@ -256,11 +256,35 @@ async def evaluate_stream_latency(model, task, mode, logger):
     logger.add_column("token_generation_speed", token_generation_speeds)
 
 async def evaluate_sync_throughput(model, task, mode, parallel, logger):
-    async def worker():
-        elapsed, reqeusts, success_requests, completion_tokens = 1, 2, 3, 4
-        return [elapsed, reqeusts, success_requests, completion_tokens]
+    async def worker(n):
+        elapsed = 0
+        requests = 0
+        success_requests = 0
+        completion_tokens = 0
 
-    results = await asyncio.gather(*[worker() for _ in range(parallel)])
+        for i, prompt in enumerate(prompts(model, task)):
+            request = CompletionRequest(model, task, prompt, mode)
+
+            async for response, latency in send_request(request):
+                elapsed += latency if latency is not None else 0
+                completion_tokens += response["usage"]["completion_tokens"] if latency is not None else 0
+
+                requests += 1
+
+                if latency is not None:
+                    print(
+                        f"[Worker {n:2d} - Complete {i+1:3d}] {model2id[model]} {task} | "
+                        f"Elapsed: {latency:.3f} sec | "
+                        f"Completion tokens: {response["usage"]["completion_tokens"]}")
+
+                    success_requests += 1
+
+                else:
+                    print(f"[Worker {n:2d} - Error] {response}")
+
+        return [elapsed, requests, success_requests, completion_tokens]
+
+    results = await asyncio.gather(*[worker(i + 1) for i in range(parallel)])
 
     all_elapses, all_requests, all_success_requests, all_completion_tokens = zip(*results)
 
@@ -273,15 +297,15 @@ async def evaluate_sync_throughput(model, task, mode, parallel, logger):
     success_request_throughput = success_request / total_elapsed
     token_throughput = completion_token / total_elapsed
 
-    logger.add_column("total_elapsed", total_elapsed)
-    logger.add_column("total_request", total_request)
-    logger.add_column("success_request", success_request)
-    logger.add_column("completion_token", completion_token)
-    logger.add_column("total_request_throughput", total_request_throughput)
-    logger.add_column("success_request_throughput", success_request_throughput)
-    logger.add_column("token_throughput", token_throughput)
+    logger.add_row("total_elapsed", total_elapsed)
+    logger.add_row("total_request", total_request)
+    logger.add_row("success_request", success_request)
+    logger.add_row("completion_token", completion_token)
+    logger.add_row("total_request_throughput", total_request_throughput)
+    logger.add_row("success_request_throughput", success_request_throughput)
+    logger.add_row("token_throughput", token_throughput)
 
-    # logger.checkout()
+    logger.checkout()
 
 async def evaluate_stream_throughput(model, task, mode, parallel, logger):
     pass

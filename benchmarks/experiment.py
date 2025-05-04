@@ -8,6 +8,11 @@ import argparse
 import httpx
 import pandas as pd
 
+POD_ID = "iwly9imrnm55v0" # RTX2000 (gpt2)
+# POD_ID = "td4ionq4woxc7s" # A100 (llama2, mistral)
+PORT = 8000
+host = f"https://{POD_ID}-{PORT}.proxy.runpod.net"
+
 task2dataset = {
     "chat": "oasst1",
     "code": "humaneval",
@@ -250,6 +255,37 @@ async def evaluate_stream_latency(model, task, mode, logger):
     logger.add_column("total_latency", total_latencies)
     logger.add_column("token_generation_speed", token_generation_speeds)
 
+async def evaluate_sync_throughput(model, task, mode, parallel, logger):
+    async def worker():
+        elapsed, reqeusts, success_requests, completion_tokens = 1, 2, 3, 4
+        return [elapsed, reqeusts, success_requests, completion_tokens]
+
+    results = await asyncio.gather(*[worker() for _ in range(parallel)])
+
+    all_elapses, all_requests, all_success_requests, all_completion_tokens = zip(*results)
+
+    total_elapsed = max(elapsed for elapsed in all_elapses if elapsed is not None)
+    total_request = sum(request for request in all_requests if request is not None)
+    success_request = sum(success_request for success_request in all_success_requests if success_request is not None)
+    completion_token = sum(completion_token for completion_token in all_completion_tokens if completion_token is not None)
+
+    total_request_throughput = total_request / total_elapsed
+    success_request_throughput = success_request / total_elapsed
+    token_throughput = completion_token / total_elapsed
+
+    logger.add_column("total_elapsed", total_elapsed)
+    logger.add_column("total_request", total_request)
+    logger.add_column("success_request", success_request)
+    logger.add_column("completion_token", completion_token)
+    logger.add_column("total_request_throughput", total_request_throughput)
+    logger.add_column("success_request_throughput", success_request_throughput)
+    logger.add_column("token_throughput", token_throughput)
+
+    # logger.checkout()
+
+async def evaluate_stream_throughput(model, task, mode, parallel, logger):
+    pass
+
 def run_latency_benchmark(model, task, mode, repeat, output_path):
     logger = Logger(output_path)
 
@@ -262,7 +298,13 @@ def run_latency_benchmark(model, task, mode, repeat, output_path):
     logger.checkout()
 
 def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
-    pass
+    logger = Logger(output_path)
+
+    for i in range(repeat):
+        if mode == "sync":
+            asyncio.run(evaluate_sync_throughput(model, task, mode, parallel, logger))
+        elif mode == "stream":
+            asyncio.run(evaluate_stream_throughput(model, task, mode, parallel, logger))
 
 def main():
     args = parse_args()

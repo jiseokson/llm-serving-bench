@@ -203,6 +203,8 @@ async def evaluate_sync_latency(model, task, mode, logger):
     completion_tokens = []
     total_latencies = []
     token_generation_speeds = []
+    used_rams = []
+    used_gpu_vrams = []
 
     for i, prompt in enumerate(prompts(model, task)):
         request = CompletionRequest(model, task, prompt, mode)
@@ -212,6 +214,8 @@ async def evaluate_sync_latency(model, task, mode, logger):
             completion_tokens.append(response["usage"]["completion_tokens"] if latency is not None else None)
             total_latencies.append(latency)
             token_generation_speeds.append(completion_tokens[-1] / total_latencies[-1] if latency is not None else None)
+            used_rams.append(None)
+            used_gpu_vrams.append(None)
 
             if latency is not None:
                 print(
@@ -223,16 +227,23 @@ async def evaluate_sync_latency(model, task, mode, logger):
             else:
                 print(f"[Error] {response}")
 
+    used_rams[-1] = get_system_used_ram_mb()
+    used_gpu_vrams[-1] = get_system_used_gpu_vram_mb()
+
     logger.add_column("prompt_tokens", prompt_tokens, exist_ok=True)
     logger.add_column("completion_tokens", completion_tokens)
     logger.add_column("total_latency", total_latencies)
     logger.add_column("token_generation_speed", token_generation_speeds)
+    logger.add_column("ram", used_rams)
+    logger.add_column("gpu_vram", used_gpu_vrams)
 
 async def evaluate_stream_latency(model, task, mode, logger):
     completion_tokens = []
     p2fts = []
     total_latencies = []
     token_generation_speeds = []
+    used_rams = []
+    used_gpu_vrams = []
 
     for i, prompt in enumerate(prompts(model, task)):
         token_latencies = []
@@ -264,11 +275,18 @@ async def evaluate_stream_latency(model, task, mode, logger):
         p2fts.append(p2ft if not error else None)
         total_latencies.append(total_latency if not error else None)
         token_generation_speeds.append(token_generation_speed if not error else None)
+        used_rams.append(None)
+        used_gpu_vrams.append(None)
+
+    used_rams[-1] = get_system_used_ram_mb()
+    used_gpu_vrams[-1] = get_system_used_gpu_vram_mb()
 
     logger.add_column("completion_tokens", completion_tokens)
     logger.add_column("p2ft", p2fts)
     logger.add_column("total_latency", total_latencies)
     logger.add_column("token_generation_speed", token_generation_speeds)
+    logger.add_column("ram", used_rams)
+    logger.add_column("gpu_vram", used_gpu_vrams)
 
 async def sync_worker(n, model, task, mode):
     elapsed = 0
@@ -336,6 +354,9 @@ async def stream_worker(n, model, task, mode):
 async def evaluate_throughput(model, task, mode, worker, parallel, logger):
     results = await asyncio.gather(*[worker(i + 1, model, task, mode) for i in range(parallel)])
 
+    used_ram = get_system_used_ram_mb()
+    used_gpu_vram = get_system_used_gpu_vram_mb()
+
     all_elapses, all_requests, all_success_requests, all_completion_tokens = zip(*results)
 
     total_elapsed = max(elapsed for elapsed in all_elapses if elapsed is not None)
@@ -354,8 +375,8 @@ async def evaluate_throughput(model, task, mode, worker, parallel, logger):
     logger.add_row("total_request_throughput", total_request_throughput)
     logger.add_row("success_request_throughput", success_request_throughput)
     logger.add_row("token_throughput", token_throughput)
-
-    logger.checkout()
+    logger.add_row("ram", used_ram)
+    logger.add_row("gpu_vram", used_gpu_vram)
 
 def run_latency_benchmark(model, task, mode, repeat, output_path):
     logger = Logger(output_path)
@@ -376,6 +397,8 @@ def run_throughput_benchmark(model, task, mode, repeat, parallel, output_path):
             asyncio.run(evaluate_throughput(model, task, mode, sync_worker, parallel, logger))
         elif mode == "stream":
             asyncio.run(evaluate_throughput(model, task, mode, stream_worker, parallel, logger))
+
+    logger.checkout()
 
 def main():
     args = parse_args()

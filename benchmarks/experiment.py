@@ -8,6 +8,8 @@ import argparse
 import httpx
 import pandas as pd
 
+host = "http://localhost:8000"
+
 task2dataset = {
     "chat": "oasst1",
     "code": "humaneval",

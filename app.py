@@ -1,6 +1,6 @@
 import json, time, uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
 from pydantic import BaseModel
@@ -65,6 +65,16 @@ def stream_response(prompt, max_tokens, temperature, top_p):
 
 @app.post("/v1/completions")
 async def completion(request: CompletionRequest):
+    inputs = tokenizer(request.prompt, return_tensors="pt").to(device)
+    prompt_length = inputs.input_ids.shape[1]
+    max_input_length = model.config.max_position_embeddings
+
+    if prompt_length > max_input_length:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Prompt is too long: {prompt_length} tokens. Model supports up to {max_input_length} tokens."
+        )
+    
     if request.stream:
         return StreamingResponse(
             stream_response(

@@ -10,7 +10,7 @@ import psutil
 import pynvml
 import pandas as pd
 
-host = "http://localhost:8000"
+host = "https://ki7kfi6xy5uw4s-8000.proxy.runpod.net"
 
 task2dataset = {
     "chat": "oasst1",
@@ -134,6 +134,7 @@ class CompletionRequest:
         elif self.apiver == "chat":
             self.payload = {
                 "model": self.model_id,
+                "stream": True if mode == "stream" else False,
                 **prompt,
                 **self.generation_args}
             

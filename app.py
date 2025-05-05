@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--checkpoint", type=str, default="gpt2")
+parser.add_argument("--checkpoint", type=str, default="openai-community/gpt2")
 args, _ = parser.parse_known_args()
 
 checkpoint = args.checkpoint

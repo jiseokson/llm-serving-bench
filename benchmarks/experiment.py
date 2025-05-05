@@ -10,7 +10,7 @@ import psutil
 import pynvml
 import pandas as pd
 
-host = "https://ki7kfi6xy5uw4s-8000.proxy.runpod.net"
+host = "http://localhost:8000"
 
 task2dataset = {
     "chat": "oasst1",

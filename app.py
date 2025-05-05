@@ -1,5 +1,4 @@
 import json, time, uuid
-import argparse
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -10,11 +9,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--checkpoint", type=str, default="openai-community/gpt2")
-args, _ = parser.parse_known_args()
-
-checkpoint = args.checkpoint
+checkpoint = "openai-community/gpt2"
 
 app = FastAPI()
 
@@ -68,7 +63,7 @@ def stream_response(prompt, max_tokens, temperature, top_p):
 
     yield "data: [DONE]\n\n"
 
-@app.post("/generate")
+@app.post("/v1/completions")
 async def completion(request: CompletionRequest):
     if request.stream:
         return StreamingResponse(

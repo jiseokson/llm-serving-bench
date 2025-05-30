@@ -79,13 +79,20 @@ Sync 방식과 Streaming 방식은 생성 요청 이후 응답을 수신하는 �
 
 ## Results
 
-### GPT-2 Latency
+### GPT-2 Latency & P2FT
+
+GPT-2 모델에 대해 태스크별 Latency를 직접 구현한 Serving 스크립트와 vLLM에서 각각 측정했습니다.
+왼쪽 그래프는 전체 응답을 수신하기까지의 시간(Total Latency), 오른쪽 그래프는 첫 토큰을 수신하기까지의 시간(Prompt-to-First-Token, P2FT)을 나타냅니다.
+
 <p align="center">
  <img src="https://github.com/user-attachments/assets/22582dc0-b95b-4c7a-b9ae-c761ab7885c4" width="45%"/>
  <img src="https://github.com/user-attachments/assets/030de9cd-07cd-4999-b4e1-49647ee752a1" width="45%"/>
 </p>
 
-### Llama 2 Latency
+### Llama 2 Latency & P2FT
+
+Llama 2 모델에 대해 태스크별 Latency를 직접 구현한 Serving 스크립트와 vLLM에서 각각 측정했습니다.
+왼쪽 그래프는 전체 응답을 수신하기까지의 시간(Total Latency), 오른쪽 그래프는 첫 토큰을 수신하기까지의 시간(Prompt-to-First-Token, P2FT)을 나타냅니다.
 
 <p align="center">
  <img src="https://github.com/user-attachments/assets/d5119c33-d807-4f4c-9f24-39cf97877924" width="45%"/>
@@ -94,12 +101,16 @@ Sync 방식과 Streaming 방식은 생성 요청 이후 응답을 수신하는 �
 
 ### Token Throughput on Chat
 
+동시 요청 수에 따른 throughput(`token/s`)을 측정했습니다. 왼쪽 그래프는 동시 요청수 `p=2`에서의 throughput, 오른쪽 그래프는 동시 요청수 `p=4`에서의 throughput을 나타냅니다.
+
 <p align="center">
  <img src="https://github.com/user-attachments/assets/b1099dd6-0ba1-4836-b60b-bc18fbbf3ef8" width="45%"/>
  <img src="https://github.com/user-attachments/assets/5448a134-f81f-4284-b814-a28af52c5a02" width="45%"/>
 </p>
 
 ### GPU VRAM Usage on Chat
+
+동시 요청 수에 따른 GPU VRAM 사용률을 측정했습니다. 왼쪽 그래프는 동시 요청수 `p=2`에서의 VRAM 사용률, 오른쪽 그래프는 동시 요청수 `p=4`에서의 VRAM 사용률을 나타냅니다.
 
 <p align="center">
  <img src="https://github.com/user-attachments/assets/82c42e21-7011-4a92-9780-ea9c4fc590ec" width="45%"/>

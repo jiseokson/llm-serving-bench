@@ -99,7 +99,7 @@ Llama 2 모델에 대해 태스크별 Latency를 직접 구현한 **Serving** �
 
 ### Token Throughput on Chat
 
-동시 요청 수에 따른 throughput(`**token**/s`)을 측정했습니다. 왼쪽 그래프는 동시 요청수 `p=2`에서의 throughput, 오른쪽 그래프는 동시 요청수 `p=4`에서의 throughput을 나타냅니다.
+동시 요청 수에 따른 throughput(`token/s`)을 측정했습니다. 왼쪽 그래프는 동시 요청수 `p=2`에서의 throughput, 오른쪽 그래프는 동시 요청수 `p=4`에서의 throughput을 나타냅니다.
 
 <p align="center">
  <img src="https://github.com/user-attachments/assets/b1099dd6-0ba1-4836-b60b-bc18fbbf3ef8" width="45%"/>

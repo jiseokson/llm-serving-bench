@@ -40,7 +40,7 @@ host = "http://localhost:8000"
 
 ```bash
 # Latency 계열 지표 측정, 10회 반복
-python **experiment.py --model gpt2 --task **chat** --mode stream --repeat 10
+python experiment.py --model gpt2 --task chat --mode stream --repeat 10
 
 # Throughput 계열 지표 측정, 10회 반복, 8 동시 요청
 python experiment.py --model gpt2 --task qa --mode stream --repeat 10 --throughput-only --parallel 8

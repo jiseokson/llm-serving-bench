@@ -79,5 +79,32 @@ Sync 방식과 Streaming 방식은 생성 요청 이후 응답을 수신하는 �
 
 ## Results
 
+### GPT-2 Latency
+<p align="center">
+ <img src="https://github.com/user-attachments/assets/22582dc0-b95b-4c7a-b9ae-c761ab7885c4" width="45%"/>
+ <img src="https://github.com/user-attachments/assets/030de9cd-07cd-4999-b4e1-49647ee752a1" width="45%"/>
+</p>
+
+### Llama 2 Latency
+
+<p align="center">
+ <img src="https://github.com/user-attachments/assets/d5119c33-d807-4f4c-9f24-39cf97877924" width="45%"/>
+ <img src="https://github.com/user-attachments/assets/8188701c-d076-4944-82a4-2e3218016c97" width="45%"/>
+</p>
+
+### Token Throughput on Chat
+
+<p align="center">
+ <img src="https://github.com/user-attachments/assets/b1099dd6-0ba1-4836-b60b-bc18fbbf3ef8" width="45%"/>
+ <img src="https://github.com/user-attachments/assets/5448a134-f81f-4284-b814-a28af52c5a02" width="45%"/>
+</p>
+
+### GPU VRAM Usage on Chat
+
+<p align="center">
+ <img src="https://github.com/user-attachments/assets/82c42e21-7011-4a92-9780-ea9c4fc590ec" width="45%"/>
+ <img src="https://github.com/user-attachments/assets/29b27697-2e8e-435e-b17a-90a5ce91d9d0" width="45%"/>
+</p>
+
 ## Additional Resources
 [Google slide - 중간 발표](https://docs.google.com/presentation/d/1dIXP-vJu0QszjQoBENqWEVvm_JJ5_WqBpWjJHkA5G68/edit?usp=sharing)

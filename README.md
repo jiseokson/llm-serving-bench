@@ -28,7 +28,7 @@ pip install -r requirements.txt
 nohup uvicorn app:app --host 0.0.0.0 --port 8000 &
 ```
 
-서버는 기본적으로 포트 8000에서 실행합니다. 이는 벤치마킹 툴이 in-host HTTP 방식으로 해당 포트(8000)를 통해 요청을 보내도록 구성되어 있기 때문입니다. 다른 포트를 사용할 경우 `benchmarks/**experiment.py**` 내부의 `host` 값을 함께 수정해야 합니다.
+서버는 기본적으로 포트 8000에서 실행합니다. 이는 벤치마킹 툴이 in-host HTTP 방식으로 해당 포트(8000)를 통해 요청을 보내도록 구성되어 있기 때문입니다. 다른 포트를 사용할 경우 `benchmarks/experiment.py` 내부의 `host` 값을 함께 수정해야 합니다.
 
 ```python
 host = "http://localhost:8000"

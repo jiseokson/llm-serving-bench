@@ -75,8 +75,6 @@ Sync 방식과 Streaming 방식은 생성 요청 이후 응답을 수신하는 �
 | **QA** | 일반 상식 기반의 질의응답 (closed-book) | [`mandarjoshi/trivia_qa`](https://huggingface.co/datasets/mandarjoshi/trivia_qa) |
 | **Code Generation** | 함수 수준의 파이썬 코드 생성 | [`openai/humaneval`](https://huggingface.co/datasets/openai/openai_humaneval) |
 
-## Code Overview
-
 ## Results
 
 ### GPT-2 Latency & P2FT

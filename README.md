@@ -56,7 +56,7 @@ Sync 방식과 Streaming 방식은 생성 요청 이후 응답을 수신하는 �
 | 지표 | Sync 방식 | Streaming 방식 | 비교 / 측정 방식 요약 |
 |-|-|-|-|
 | **Total Latency** | 전체 응답이 완전히 도착한 시점까지 측정 | 마지막 토큰이 수신된 시점까지 측정 | `start_time ~ end_time` |
-| **Prompt-to-First-Token**<br>(**P2FT**) | 측정 불가 (토큰 단위 응답 아님) | 첫 토큰 수신 시점까지 측정 가능 | `start_time ~ 첫 **SSE** 수신 시점` |
+| **Prompt-to-First-Token**<br>(**P2FT**) | 측정 불가 (토큰 단위 응답 아님) | 첫 토큰 수신 시점까지 측정 가능 | `start_time ~ 첫 SSE 수신 시점` |
 | **Token Generation Speed**<br>(tok/s) | 생성된 토큰 수를 총 응답 시간으로 나눔 | 생성된 토큰 수를 마지막 토큰 수신 시점까지의 시간으로 나눔 | 토큰 수 카운트 + 응답 시간 측정 필요 |
 | **Request Throughput**<br>(req/s) | 요청 수를 총 시간으로 나눔 | 요청 수를 마지막 토큰 수신 시점까지의 시간으로 나눔 | `httpx + asyncio` 기반 동시 요청 |
 | **Token Throughput**<br>(tok/s) | 생성된 토큰 수를 총 시간으로 나눔 | 생성된 토큰 수를 마지막 토큰 수신 시점까지의 시간으로 나눔 | 위와 동일 |
